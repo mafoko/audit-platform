@@ -1,8 +1,8 @@
 "use client";
 
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useState } from "react";
 import { api } from "@/lib/api";
 import { Control, Standard } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -144,8 +144,8 @@ export default function ControlsPage() {
           ) : controls.length === 0 ? (
             <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No controls yet. Generate or add controls to get started.</TableCell></TableRow>
           ) : controls.map(ctrl => (
-            <>
-              <TableRow key={ctrl.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedId(expandedId === ctrl.id ? null : ctrl.id)}>
+            <React.Fragment key={ctrl.id}>
+              <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedId(expandedId === ctrl.id ? null : ctrl.id)}>
                 <TableCell>
                   {expandedId === ctrl.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </TableCell>
@@ -168,7 +168,7 @@ export default function ControlsPage() {
                 </TableCell>
               </TableRow>
               {expandedId === ctrl.id && (
-                <TableRow key={`${ctrl.id}-expanded`}>
+                <TableRow>
                   <TableCell colSpan={6} className="bg-slate-50 px-6 py-4">
                     <div className="space-y-3 text-sm">
                       {ctrl.description && (
@@ -193,7 +193,7 @@ export default function ControlsPage() {
                   </TableCell>
                 </TableRow>
               )}
-            </>
+            </React.Fragment>
           ))}
         </TableBody>
       </Table>
