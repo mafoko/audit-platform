@@ -1,135 +1,149 @@
 export interface User {
-  id: string;
+  id: number;
   email: string;
   full_name: string;
   role: string;
+  firm_name: string | null;
   is_active: boolean;
 }
 
-export type EngagementStatus = "PLANNING" | "FIELDWORK" | "REVIEW" | "COMPLETE";
+// Match backend EngagementStatus enum exactly
+export type EngagementStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "EVIDENCE_COLLECTION"
+  | "REVIEW"
+  | "COMPLETED"
+  | "CLOSED";
 
 export interface Engagement {
-  id: string;
+  id: number;
   title: string;
   client_name: string;
-  objectives: string;
-  start_date: string;
-  end_date: string;
+  objectives: string | null;
+  scope: string | null;
+  start_date: string | null;
+  end_date: string | null;
   status: EngagementStatus;
-  lead_auditor_id: string;
+  lead_auditor_id: number;
   created_at: string;
   updated_at: string;
 }
 
-export type StandardType = "ISO" | "SOC" | "PCI" | "HIPAA" | "CUSTOM";
+export type StandardType =
+  | "POLICY"
+  | "INTERNATIONAL_STANDARD"
+  | "LOCAL_ACT"
+  | "INTERNATIONAL_LAW"
+  | "CUSTOM";
 
 export interface Standard {
-  id: string;
-  engagement_id: string;
+  id: number;
+  engagement_id: number;
   name: string;
   type: StandardType;
-  content: string;
+  content: string | null;
+  file_path: string | null;
   created_at: string;
 }
 
-export type ControlStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE";
-
 export interface Control {
-  id: string;
-  engagement_id: string;
-  standard_id: string;
-  ref_code: string;
+  id: number;
+  engagement_id: number;
+  standard_id: number | null;
+  control_ref: string;
   title: string;
-  description: string;
-  objective: string;
-  test_procedure: string;
-  assigned_to_id: string | null;
-  status: ControlStatus;
+  description: string | null;
+  category: string | null;
+  is_active: boolean;
   created_at: string;
 }
 
 export type EvidenceStatus = "PENDING" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "OVERDUE";
+export type FileReviewStatus = "PENDING" | "COMPLIANT" | "NON_COMPLIANT" | "PARTIAL";
 
 export interface EvidenceRequest {
-  id: string;
-  engagement_id: string;
-  control_id: string | null;
-  ref_code: string;
+  id: number;
+  engagement_id: number;
+  control_id: number | null;
+  request_ref: string;
   title: string;
-  description: string;
-  requested_from: string;
-  requested_date: string;
-  due_date: string;
-  submitted_date: string | null;
+  description: string | null;
+  requested_by_id: number;
+  requested_at: string;
+  deadline_working_hours: number;
+  due_at: string | null;
+  submitted_at: string | null;
   status: EvidenceStatus;
+  is_delayed: boolean;
+  delay_hours: number | null;
   notes: string | null;
-  created_at: string;
 }
 
 export interface EvidenceFile {
-  id: string;
-  evidence_request_id: string;
-  filename: string;
+  id: number;
+  evidence_request_id: number;
+  file_name: string;
   file_size: number;
-  content_type: string;
-  storage_path: string;
-  uploaded_by_id: string;
+  file_path: string;
+  uploaded_by_id: number;
   uploaded_at: string;
+  review_status: FileReviewStatus;
+  reviewer_notes: string | null;
 }
 
 export type RiskRating = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
-export type FindingStatus = "OPEN" | "IN_REMEDIATION" | "CLOSED" | "ACCEPTED";
+export type FindingStatus = "OPEN" | "IN_PROGRESS" | "CLOSED" | "ACCEPTED_RISK";
 
 export interface Finding {
-  id: string;
-  engagement_id: string;
-  control_id: string | null;
-  evidence_request_id: string | null;
-  ref_code: string;
+  id: number;
+  engagement_id: number;
+  control_id: number | null;
+  evidence_request_id: number | null;
+  finding_ref: string;
   title: string;
-  description: string;
+  description: string | null;
+  root_cause: string | null;
+  recommendation: string | null;
   risk_rating: RiskRating;
-  status: FindingStatus;
-  recommendation: string;
+  custom_rating: string | null;
   management_response: string | null;
-  due_date: string | null;
+  management_response_date: string | null;
+  status: FindingStatus;
+  created_by_id: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface RiskMatrix {
-  id: string;
-  engagement_id: string;
-  likelihood: number;
-  impact: number;
-  risk_score: number;
+  id: number;
+  engagement_id: number;
+  name: string;
+  levels: Array<{ label: string; color: string; score: number }>;
+  is_default: boolean;
 }
 
 export type ReportStatus = "DRAFT" | "IN_REVIEW" | "FINAL";
 
-export interface Report {
-  id: string;
-  engagement_id: string;
-  title: string;
-  status: ReportStatus;
-  content: string;
-  generated_at: string;
-  finalized_at: string | null;
-}
-
 export interface ReportAttestation {
-  id: string;
-  report_id: string;
-  attested_by_id: string;
-  attested_at: string;
+  id: number;
+  report_id: number;
+  attested_by_id: number;
   role: string;
-  comments: string;
+  attested_at: string;
+  signature_note: string | null;
 }
 
-export interface DashboardStats {
-  total_engagements: number;
-  active_engagements: number;
-  overdue_requests: number;
-  open_findings: number;
-  findings_by_risk: Record<RiskRating, number>;
-  evidence_by_status: Record<EvidenceStatus, number>;
+export interface Report {
+  id: number;
+  engagement_id: number;
+  title: string;
+  executive_summary: string | null;
+  methodology: string | null;
+  scope_description: string | null;
+  status: ReportStatus;
+  generated_at: string | null;
+  file_path: string | null;
+  version: number;
+  attestations: ReportAttestation[];
 }

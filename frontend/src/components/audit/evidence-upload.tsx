@@ -20,7 +20,7 @@ export function EvidenceUpload({ requestId, onUploaded }: Props) {
     try {
       const form = new FormData();
       form.append("file", file);
-      await api.post(`/evidence-requests/${requestId}/files`, form, {
+      await api.post(`/evidence-requests/${requestId}/upload`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUploaded(prev => [...prev, file.name]);

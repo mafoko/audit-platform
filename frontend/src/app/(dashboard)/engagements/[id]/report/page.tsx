@@ -21,7 +21,7 @@ export default function ReportPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
   const [attestOpen, setAttestOpen] = useState(false);
-  const [attestForm, setAttestForm] = useState({ role: "", comments: "" });
+  const [attestForm, setAttestForm] = useState({ role: "", signature_note: "" });
 
   const { data: report, isLoading } = useQuery<Report>({
     queryKey: ["report", id],
@@ -60,7 +60,7 @@ export default function ReportPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["attestations", report?.id] });
       setAttestOpen(false);
-      setAttestForm({ role: "", comments: "" });
+      setAttestForm({ role: "", signature_note: "" });
     },
   });
 
@@ -94,11 +94,6 @@ export default function ReportPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Generated: {format(new Date(report.generated_at), "MMM d, yyyy HH:mm")}
               </p>
-              {report.finalized_at && (
-                <p className="text-sm text-muted-foreground">
-                  Finalized: {format(new Date(report.finalized_at), "MMM d, yyyy HH:mm")}
-                </p>
-              )}
             </div>
             <StatusBadge status={report.status} type="engagement" />
           </div>
@@ -160,7 +155,7 @@ export default function ReportPage() {
                 <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No findings.</TableCell></TableRow>
               ) : findings.map(f => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-mono text-xs">{f.ref_code}</TableCell>
+                  <TableCell className="font-mono text-xs">{f.finding_ref}</TableCell>
                   <TableCell className="font-medium">{f.title}</TableCell>
                   <TableCell><RiskBadge rating={f.risk_rating} /></TableCell>
                   <TableCell><StatusBadge status={f.status} type="finding" /></TableCell>
@@ -190,8 +185,8 @@ export default function ReportPage() {
                     <Input value={attestForm.role} onChange={e => setAttestForm(p => ({ ...p, role: e.target.value }))} placeholder="e.g. Lead Auditor, Manager" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Comments</Label>
-                    <Textarea value={attestForm.comments} onChange={e => setAttestForm(p => ({ ...p, comments: e.target.value }))} rows={4} placeholder="Add any comments about this attestation…" />
+                    <Label>Signature Note</Label>
+                    <Textarea value={attestForm.signature_note} onChange={e => setAttestForm(p => ({ ...p, signature_note: e.target.value }))} rows={4} placeholder="Add any comments about this attestation…" />
                   </div>
                 </div>
                 <DialogFooter>
@@ -215,7 +210,7 @@ export default function ReportPage() {
                     <span className="font-medium text-sm">{att.role}</span>
                     <span className="text-xs text-muted-foreground">{format(new Date(att.attested_at), "MMM d, yyyy HH:mm")}</span>
                   </div>
-                  {att.comments && <p className="text-sm text-muted-foreground">{att.comments}</p>}
+                  {att.signature_note && <p className="text-sm text-muted-foreground">{att.signature_note}</p>}
                 </div>
               ))}
             </div>

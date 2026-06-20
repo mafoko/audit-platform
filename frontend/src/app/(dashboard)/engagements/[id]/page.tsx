@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/audit/status-badge";
 import { RiskBadge } from "@/components/audit/risk-badge";
 import { DeadlineCountdown } from "@/components/audit/deadline-countdown";
@@ -23,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Zap, FileText, Download } from "lucide-react";
+
+const STANDARD_TYPES = ["POLICY", "INTERNATIONAL_STANDARD", "LOCAL_ACT", "INTERNATIONAL_LAW", "CUSTOM"] as const;
 
 export default function EngagementDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,21 +70,17 @@ export default function EngagementDetailPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["report", id] }),
   });
 
-  // Add Standard dialog state
   const [stdOpen, setStdOpen] = useState(false);
-  const [stdForm, setStdForm] = useState({ name: "", type: "ISO", content: "" });
+  const [stdForm, setStdForm] = useState({ name: "", type: "INTERNATIONAL_STANDARD", content: "" });
 
   const addStandardMutation = useMutation({
-    mutationFn: () => api.post("/standards", { ...stdForm, engagement_id: id }),
+    mutationFn: () => api.post(`/engagements/${id}/standards`, { ...stdForm }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["standards", id] });
       setStdOpen(false);
-      setStdForm({ name: "", type: "ISO", content: "" });
+      setStdForm({ name: "", type: "INTERNATIONAL_STANDARD", content: "" });
     },
   });
-
-  const controlsComplete = controls.filter(c => c.status === "COMPLETE").length;
-  const controlsProgress = controls.length > 0 ? Math.round((controlsComplete / controls.length) * 100) : 0;
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading engagement…</div>;
@@ -122,7 +119,9 @@ export default function EngagementDetailPage() {
             <Card>
               <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Period</CardTitle></CardHeader>
               <CardContent className="text-sm">
-                {format(new Date(engagement.start_date), "MMM d, yyyy")} — {format(new Date(engagement.end_date), "MMM d, yyyy")}
+                {engagement.start_date ? format(new Date(engagement.start_date), "MMM d, yyyy") : "—"}
+                {" — "}
+                {engagement.end_date ? format(new Date(engagement.end_date), "MMM d, yyyy") : "—"}
               </CardContent>
             </Card>
           </div>
@@ -130,18 +129,12 @@ export default function EngagementDetailPage() {
             <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Objectives</CardTitle></CardHeader>
             <CardContent className="text-sm whitespace-pre-wrap">{engagement.objectives || "No objectives set."}</CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Controls Progress</CardTitle>
-                <span className="text-xs text-muted-foreground">{controlsComplete}/{controls.length}</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Progress value={controlsProgress} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">{controlsProgress}% complete</p>
-            </CardContent>
-          </Card>
+          {engagement.scope && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Scope</CardTitle></CardHeader>
+              <CardContent className="text-sm whitespace-pre-wrap">{engagement.scope}</CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* STANDARDS */}
@@ -163,7 +156,7 @@ export default function EngagementDetailPage() {
                     <Select value={stdForm.type} onValueChange={v => setStdForm(p => ({ ...p, type: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {["ISO","SOC","PCI","HIPAA","CUSTOM"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {STANDARD_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -191,7 +184,7 @@ export default function EngagementDetailPage() {
                     <p className="font-medium">{std.name}</p>
                     {std.content && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{std.content}</p>}
                   </div>
-                  <Badge variant="outline">{std.type}</Badge>
+                  <Badge variant="outline">{std.type.replace(/_/g, " ")}</Badge>
                 </CardContent>
               </Card>
             ))}
@@ -210,19 +203,17 @@ export default function EngagementDetailPage() {
               <TableRow>
                 <TableHead>Ref</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Objective</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Category</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {controls.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No controls yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No controls yet.</TableCell></TableRow>
               ) : controls.map(ctrl => (
                 <TableRow key={ctrl.id}>
-                  <TableCell className="font-mono text-xs">{ctrl.ref_code}</TableCell>
+                  <TableCell className="font-mono text-xs">{ctrl.control_ref}</TableCell>
                   <TableCell className="font-medium">{ctrl.title}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{ctrl.objective}</TableCell>
-                  <TableCell><StatusBadge status={ctrl.status} type="engagement" /></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{ctrl.category ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -236,7 +227,7 @@ export default function EngagementDetailPage() {
               <TableRow>
                 <TableHead>Ref</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Requested From</TableHead>
+                <TableHead>Deadline</TableHead>
                 <TableHead>Due</TableHead>
                 <TableHead>Time Left</TableHead>
                 <TableHead>Status</TableHead>
@@ -247,12 +238,12 @@ export default function EngagementDetailPage() {
                 <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No evidence requests.</TableCell></TableRow>
               ) : evidenceRequests.map(er => (
                 <TableRow key={er.id}>
-                  <TableCell className="font-mono text-xs">{er.ref_code}</TableCell>
+                  <TableCell className="font-mono text-xs">{er.request_ref}</TableCell>
                   <TableCell className="font-medium">{er.title}</TableCell>
-                  <TableCell className="text-sm">{er.requested_from}</TableCell>
-                  <TableCell className="text-sm">{format(new Date(er.due_date), "MMM d, yyyy")}</TableCell>
+                  <TableCell className="text-sm">{er.deadline_working_hours}h</TableCell>
+                  <TableCell className="text-sm">{er.due_at ? format(new Date(er.due_at), "MMM d, yyyy") : "—"}</TableCell>
                   <TableCell>
-                    <DeadlineCountdown dueAt={er.due_date} submittedAt={er.submitted_date} />
+                    <DeadlineCountdown dueAt={er.due_at} submittedAt={er.submitted_at} />
                   </TableCell>
                   <TableCell><StatusBadge status={er.status} type="evidence" /></TableCell>
                 </TableRow>
@@ -283,19 +274,17 @@ export default function EngagementDetailPage() {
                 <TableHead>Title</TableHead>
                 <TableHead>Risk</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Due Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {findings.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No findings.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No findings.</TableCell></TableRow>
               ) : findings.map(f => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-mono text-xs">{f.ref_code}</TableCell>
+                  <TableCell className="font-mono text-xs">{f.finding_ref}</TableCell>
                   <TableCell className="font-medium">{f.title}</TableCell>
                   <TableCell><RiskBadge rating={f.risk_rating} /></TableCell>
                   <TableCell><StatusBadge status={f.status} type="finding" /></TableCell>
-                  <TableCell className="text-sm">{f.due_date ? format(new Date(f.due_date), "MMM d, yyyy") : "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -323,9 +312,11 @@ export default function EngagementDetailPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Generated: {format(new Date(report.generated_at), "MMM d, yyyy HH:mm")}
-                </p>
+                {report.generated_at && (
+                  <p className="text-sm text-muted-foreground">
+                    Generated: {format(new Date(report.generated_at), "MMM d, yyyy HH:mm")}
+                  </p>
+                )}
                 <Button variant="outline" size="sm" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/reports/${report.id}/download`, "_blank")}>
                   <Download className="h-4 w-4 mr-1" />Download Report
                 </Button>

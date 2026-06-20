@@ -25,7 +25,7 @@ export default function EvidencePage() {
   const [open, setOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<EvidenceRequest | null>(null);
   const [form, setForm] = useState({
-    title: "", description: "", requested_from: "", due_date: "", control_id: "",
+    title: "", description: "", request_ref: "", deadline_working_hours: "48", control_id: "",
   });
 
   const { data: evidenceRequests = [], isLoading } = useQuery<EvidenceRequest[]>({
@@ -39,15 +39,17 @@ export default function EvidencePage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => api.post("/evidence-requests", {
-      ...form,
-      engagement_id: id,
-      control_id: form.control_id || null,
+    mutationFn: () => api.post(`/engagements/${id}/evidence-requests`, {
+      request_ref: form.request_ref,
+      title: form.title,
+      description: form.description || null,
+      deadline_working_hours: parseInt(form.deadline_working_hours) || 48,
+      control_id: form.control_id ? parseInt(form.control_id) : null,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["evidence-requests", id] });
       setOpen(false);
-      setForm({ title: "", description: "", requested_from: "", due_date: "", control_id: "" });
+      setForm({ title: "", description: "", request_ref: "", deadline_working_hours: "48", control_id: "" });
     },
   });
 
@@ -63,6 +65,10 @@ export default function EvidencePage() {
             <DialogHeader><DialogTitle>New Evidence Request</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1.5">
+                <Label>Request Ref *</Label>
+                <Input value={form.request_ref} onChange={e => setForm(p => ({ ...p, request_ref: e.target.value }))} placeholder="e.g. PBC-001" />
+              </div>
+              <div className="space-y-1.5">
                 <Label>Title *</Label>
                 <Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Evidence title" />
               </div>
@@ -71,12 +77,8 @@ export default function EvidencePage() {
                 <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
               </div>
               <div className="space-y-1.5">
-                <Label>Requested From *</Label>
-                <Input value={form.requested_from} onChange={e => setForm(p => ({ ...p, requested_from: e.target.value }))} placeholder="e.g. IT Department" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Due Date *</Label>
-                <Input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} />
+                <Label>Deadline (working hours) *</Label>
+                <Input type="number" min="1" value={form.deadline_working_hours} onChange={e => setForm(p => ({ ...p, deadline_working_hours: e.target.value }))} placeholder="48" />
               </div>
               {controls.length > 0 && (
                 <div className="space-y-1.5">
@@ -84,7 +86,7 @@ export default function EvidencePage() {
                   <Select value={form.control_id} onValueChange={v => setForm(p => ({ ...p, control_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select control…" /></SelectTrigger>
                     <SelectContent>
-                      {controls.map(c => <SelectItem key={c.id} value={c.id}>{c.ref_code} — {c.title}</SelectItem>)}
+                      {controls.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.control_ref} — {c.title}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -92,7 +94,7 @@ export default function EvidencePage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMutation.mutate()} disabled={!form.title || !form.requested_from || !form.due_date || createMutation.isPending}>
+              <Button onClick={() => createMutation.mutate()} disabled={!form.title || !form.request_ref || createMutation.isPending}>
                 {createMutation.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
@@ -107,8 +109,8 @@ export default function EvidencePage() {
               <TableRow>
                 <TableHead>Ref</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Requested From</TableHead>
-                <TableHead>Due Date</TableHead>
+                <TableHead>Deadline (hrs)</TableHead>
+                <TableHead>Due</TableHead>
                 <TableHead>Time Remaining</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -124,12 +126,12 @@ export default function EvidencePage() {
                   className={`cursor-pointer ${selectedRequest?.id === er.id ? "bg-blue-50" : ""}`}
                   onClick={() => setSelectedRequest(selectedRequest?.id === er.id ? null : er)}
                 >
-                  <TableCell className="font-mono text-xs">{er.ref_code}</TableCell>
+                  <TableCell className="font-mono text-xs">{er.request_ref}</TableCell>
                   <TableCell className="font-medium">{er.title}</TableCell>
-                  <TableCell className="text-sm">{er.requested_from}</TableCell>
-                  <TableCell className="text-sm">{format(new Date(er.due_date), "MMM d, yyyy")}</TableCell>
+                  <TableCell className="text-sm">{er.deadline_working_hours}h</TableCell>
+                  <TableCell className="text-sm">{er.due_at ? format(new Date(er.due_at), "MMM d, yyyy") : "—"}</TableCell>
                   <TableCell>
-                    <DeadlineCountdown dueAt={er.due_date} submittedAt={er.submitted_date} />
+                    <DeadlineCountdown dueAt={er.due_at} submittedAt={er.submitted_at} />
                   </TableCell>
                   <TableCell><StatusBadge status={er.status} type="evidence" /></TableCell>
                 </TableRow>
@@ -144,7 +146,7 @@ export default function EvidencePage() {
               <CardContent className="pt-4 space-y-4">
                 <div>
                   <p className="font-semibold">{selectedRequest.title}</p>
-                  <p className="text-xs text-muted-foreground">{selectedRequest.ref_code}</p>
+                  <p className="text-xs text-muted-foreground">{selectedRequest.request_ref}</p>
                 </div>
                 {selectedRequest.description && (
                   <p className="text-sm">{selectedRequest.description}</p>
@@ -155,7 +157,7 @@ export default function EvidencePage() {
                   </div>
                 )}
                 <EvidenceUpload
-                  requestId={parseInt(selectedRequest.id)}
+                  requestId={selectedRequest.id}
                   onUploaded={() => qc.invalidateQueries({ queryKey: ["evidence-requests", id] })}
                 />
               </CardContent>

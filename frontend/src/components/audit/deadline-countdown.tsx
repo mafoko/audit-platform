@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Clock, AlertCircle } from "lucide-react";
 
 interface Props {
-  dueAt: string;
+  dueAt: string | null;
   submittedAt?: string | null;
   isDelayed?: boolean;
   delayHours?: number | null;
@@ -18,14 +18,16 @@ function getWorkingHoursRemaining(dueAt: Date): number {
 }
 
 export function DeadlineCountdown({ dueAt, submittedAt, isDelayed, delayHours }: Props) {
-  const due = new Date(dueAt);
-  const [remaining, setRemaining] = useState(() => getWorkingHoursRemaining(due));
+  const due = dueAt ? new Date(dueAt) : null;
+  const [remaining, setRemaining] = useState(() => due ? getWorkingHoursRemaining(due) : 0);
 
   useEffect(() => {
-    if (submittedAt) return;
+    if (submittedAt || !due) return;
     const id = setInterval(() => setRemaining(getWorkingHoursRemaining(due)), 60000);
     return () => clearInterval(id);
   }, [dueAt, submittedAt]);
+
+  if (!due) return <span className="text-xs text-muted-foreground">—</span>;
 
   if (submittedAt) {
     return (
