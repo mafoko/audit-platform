@@ -91,9 +91,11 @@ export default function ReportPage() {
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl">{report.title}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Generated: {format(new Date(report.generated_at), "MMM d, yyyy HH:mm")}
-              </p>
+              {report.generated_at && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Generated: {format(new Date(report.generated_at), "MMM d, yyyy HH:mm")}
+                </p>
+              )}
             </div>
             <StatusBadge status={report.status} type="engagement" />
           </div>
