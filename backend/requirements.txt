@@ -4,8 +4,7 @@ sqlalchemy
 alembic
 psycopg2-binary
 python-jose[cryptography]
-passlib[bcrypt]
-bcrypt==4.0.1
+bcrypt
 python-multipart
 pydantic[email]
 pydantic-settings
